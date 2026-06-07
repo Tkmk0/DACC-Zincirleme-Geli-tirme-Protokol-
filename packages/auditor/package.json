@@ -1,0 +1,24 @@
+{
+  "name": "@dacc/auditor",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rimraf dist",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@dacc/core": "workspace:*",
+    "bullmq": "^5.7.0",
+    "cheerio": "^1.0.0",
+    "domhandler": "^5.0.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.0",
+    "rimraf": "^5.0.0"
+  }
+}

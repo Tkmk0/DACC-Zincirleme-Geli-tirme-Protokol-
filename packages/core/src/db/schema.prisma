@@ -1,0 +1,501 @@
+// ─────────────────────────────────────────────────────────────
+// DACC — Prisma Schema
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  ARCHIVED
+}
+
+enum AssetType {
+  URL
+  DOMAIN
+  SITEMAP
+  PAGE
+}
+
+enum AssetStatus {
+  PENDING
+  ACTIVE
+  UNREACHABLE
+  ARCHIVED
+}
+
+enum AuditStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum RiskLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum OperatorSessionStatus {
+  OPEN
+  CLOSED
+  EXPIRED
+  REVOKED
+}
+
+enum EventType {
+  ASSET_DISCOVERED
+  AUDIT_TRIGGERED
+  AUDIT_COMPLETED
+  RISK_SCORED
+  OPERATOR_ACTION
+  MAINTENANCE_RUN
+  ALERT_RAISED
+  TENANT_CREATED
+  USER_LOGIN
+  API_KEY_USED
+}
+
+enum JobStatus {
+  ENABLED
+  DISABLED
+  RUNNING
+  FAILED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum BrandDocumentStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BrandDocumentType {
+  VOICE_AND_TONE
+  VISUAL_IDENTITY
+  MESSAGING_FRAMEWORK
+  CONTENT_POLICY
+  SEO_GUIDELINES
+  COMPETITOR_RULES
+  CUSTOM
+}
+
+enum BrandQueryStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+// ─── TENANTS ──────────────────────────────────────────────────
+
+model Tenant {
+  id          String       @id @default(uuid())
+  slug        String       @unique
+  displayName String       @map("display_name")
+  status      TenantStatus @default(TRIAL)
+  planTier    String       @default("starter") @map("plan_tier")
+  maxAssets   Int          @default(100) @map("max_assets")
+  sandboxId   String?      @unique @map("sandbox_id")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  users            User[]
+  apiKeys          ApiKey[]
+  digitalAssets    DigitalAsset[]
+  auditEvents      AuditEvent[]
+  operatorSessions OperatorSession[]
+  riskScores       RiskScore[]
+  maintenanceJobs  MaintenanceJob[]
+  eventLog         EventLog[]
+  sandboxSnapshots SandboxSnapshot[]
+  brandDocuments   BrandDocument[]
+  brandQueries     BrandQuery[]
+
+  @@index([status])
+  @@index([slug])
+  @@map("tenants")
+}
+
+// ─── USERS ────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  tenantId     String    @map("tenant_id")
+  email        String
+  passwordHash String    @map("password_hash")
+  role         String    @default("viewer")
+  lastLoginAt  DateTime? @map("last_login_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  apiKeys ApiKey[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+// ─── API KEYS ─────────────────────────────────────────────────
+
+model ApiKey {
+  id         String       @id @default(uuid())
+  tenantId   String       @map("tenant_id")
+  userId     String?      @map("user_id")
+  keyHash    String       @unique @map("key_hash")
+  keyPrefix  String       @map("key_prefix")
+  label      String
+  scopes     String[]
+  status     ApiKeyStatus @default(ACTIVE)
+  expiresAt  DateTime?    @map("expires_at")
+  lastUsedAt DateTime?    @map("last_used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@index([status])
+  @@map("api_keys")
+}
+
+// ─── DIGITAL ASSETS ───────────────────────────────────────────
+
+model DigitalAsset {
+  id     String      @id @default(uuid())
+  tenantId String    @map("tenant_id")
+  type   AssetType
+  url    String
+  domain String
+  status AssetStatus @default(PENDING)
+
+  metadata     Json     @default("{}")
+  tags         String[] @default([])
+  discoveredAt DateTime @default(now()) @map("discovered_at")
+  lastSeenAt   DateTime? @map("last_seen_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  auditEvents AuditEvent[]
+  riskScores  RiskScore[]
+
+  @@unique([tenantId, url])
+  @@index([tenantId])
+  @@index([domain])
+  @@index([status])
+  @@index([tenantId, status])
+  @@map("digital_assets")
+}
+
+// ─── AUDIT EVENTS ─────────────────────────────────────────────
+
+model AuditEvent {
+  id          String      @id @default(uuid())
+  tenantId    String      @map("tenant_id")
+  assetId     String      @map("asset_id")
+  status      AuditStatus @default(QUEUED)
+  triggeredBy String      @map("triggered_by")
+  isShadow    Boolean     @default(false) @map("is_shadow")
+
+  checkResults Json @default("[]") @map("check_results")
+  summary      Json @default("{}") @map("summary")
+
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  durationMs  Int?      @map("duration_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant       @relation(fields: [tenantId], references: [id])
+  asset     DigitalAsset @relation(fields: [assetId], references: [id])
+  riskScore RiskScore?
+
+  @@index([tenantId])
+  @@index([assetId])
+  @@index([status])
+  @@index([tenantId, status])
+  @@index([createdAt])
+  @@map("audit_events")
+}
+
+// ─── OPERATOR SESSIONS ────────────────────────────────────────
+
+model OperatorSession {
+  id           String                @id @default(uuid())
+  tenantId     String                @map("tenant_id")
+  operatorId   String                @map("operator_id")
+  operatorType String                @map("operator_type")
+  status       OperatorSessionStatus @default(OPEN)
+
+  actions   Json    @default("[]")
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+  metadata  Json    @default("{}")
+
+  openedAt  DateTime  @default(now()) @map("opened_at")
+  closedAt  DateTime? @map("closed_at")
+  expiresAt DateTime? @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([operatorId])
+  @@index([status])
+  @@index([tenantId, status])
+  @@map("operator_sessions")
+}
+
+// ─── RISK SCORES ──────────────────────────────────────────────
+
+model RiskScore {
+  id           String    @id @default(uuid())
+  tenantId     String    @map("tenant_id")
+  assetId      String    @map("asset_id")
+  auditEventId String?   @unique @map("audit_event_id")
+  score        Float
+  level        RiskLevel
+  previousScore Float?   @map("previous_score")
+  isShadow     Boolean   @default(false) @map("is_shadow")
+
+  factors           Json   @default("[]")
+  calculatorVersion String @default("1.0.0") @map("calculator_version")
+
+  validFrom  DateTime  @default(now()) @map("valid_from")
+  validUntil DateTime? @map("valid_until")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  asset      DigitalAsset @relation(fields: [assetId], references: [id])
+  auditEvent AuditEvent?  @relation(fields: [auditEventId], references: [id])
+
+  @@index([tenantId])
+  @@index([assetId])
+  @@index([level])
+  @@index([tenantId, level])
+  @@index([validFrom])
+  @@map("risk_scores")
+}
+
+// ─── MAINTENANCE JOBS ─────────────────────────────────────────
+
+model MaintenanceJob {
+  id          String    @id @default(uuid())
+  tenantId    String?   @map("tenant_id")
+  name        String    @unique
+  description String    @default("")
+  cronExpr    String    @map("cron_expr")
+  handler     String
+  status      JobStatus @default(ENABLED)
+  config      Json      @default("{}")
+
+  lastRunAt     DateTime? @map("last_run_at")
+  lastRunStatus String?   @map("last_run_status")
+  lastRunError  String?   @map("last_run_error")
+  nextRunAt     DateTime? @map("next_run_at")
+  runCount      Int       @default(0) @map("run_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([nextRunAt])
+  @@map("maintenance_jobs")
+}
+
+// ─── EVENT LOG ────────────────────────────────────────────────
+
+model EventLog {
+  id           String    @id @default(uuid())
+  tenantId     String?   @map("tenant_id")
+  eventType    EventType @map("event_type")
+  sourceSystem String    @map("source_system")
+
+  targetType String? @map("target_type")
+  targetId   String? @map("target_id")
+
+  correlationId String? @map("correlation_id")
+  causationId   String? @map("causation_id")
+
+  payload Json @default("{}")
+  meta    Json @default("{}")
+
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([eventType])
+  @@index([targetId])
+  @@index([correlationId])
+  @@index([occurredAt])
+  @@index([tenantId, eventType])
+  @@map("event_log")
+}
+
+// ─── SANDBOX SNAPSHOTS ────────────────────────────────────────
+
+model SandboxSnapshot {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  stateData  Json     @map("state_data")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("sandbox_snapshots")
+}
+
+
+// ─── BRAND CONSTITUTION ───────────────────────────────────────
+// File 2: Marka Anayasası Engine
+// Vector embeddings stored as raw SQL (pgvector Unsupported type)
+
+model BrandDocument {
+  id          String              @id @default(uuid())
+  tenantId    String              @map("tenant_id")
+  type        BrandDocumentType
+  status      BrandDocumentStatus @default(DRAFT)
+  title       String
+  description String              @default("")
+
+  // Full raw content (source of truth)
+  content     String              @db.Text
+
+  // Metadata: author, version, tags, custom fields
+  meta        Json                @default("{}")
+
+  // Embedding model used to chunk this document
+  embeddingModel  String @default("text-embedding-3-small") @map("embedding_model")
+  embeddingDim    Int    @default(1536) @map("embedding_dim")
+  chunksGenerated Boolean @default(false) @map("chunks_generated")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  chunks BrandChunk[]
+  queries BrandQuery[]
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([tenantId, status])
+  @@map("brand_documents")
+}
+
+model BrandChunk {
+  id         String @id @default(uuid())
+  tenantId   String @map("tenant_id")
+  documentId String @map("document_id")
+
+  // Chunk text content
+  content    String @db.Text
+  chunkIndex Int    @map("chunk_index")
+
+  // Vector embedding stored via pgvector (managed via raw SQL)
+  // Dimension: 1536 (OpenAI text-embedding-3-small)
+  // NOTE: CREATE INDEX on brand_chunks using ivfflat in migration SQL
+  embedding  Unsupported("vector(1536)")?
+
+  // Token count for budget tracking
+  tokenCount Int  @default(0) @map("token_count")
+
+  // Metadata: page, section, heading context
+  meta Json @default("{}")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  document BrandDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([documentId])
+  @@index([tenantId, chunkIndex])
+  @@map("brand_chunks")
+}
+
+model BrandQuery {
+  id         String           @id @default(uuid())
+  tenantId   String           @map("tenant_id")
+  documentId String?          @map("document_id")
+  status     BrandQueryStatus @default(PENDING)
+
+  // Input
+  queryText  String @map("query_text") @db.Text
+
+  // Retrieved chunks (top-k)
+  retrievedChunkIds String[] @map("retrieved_chunk_ids")
+
+  // Generated response
+  response   String?  @db.Text
+  modelUsed  String?  @map("model_used")
+  promptTokens   Int? @map("prompt_tokens")
+  completionTokens Int? @map("completion_tokens")
+
+  // Compliance verdict from RAG response
+  isCompliant     Boolean? @map("is_compliant")
+  complianceScore Float?   @map("compliance_score")
+  violationTags   String[] @map("violation_tags")
+
+  // Correlation with audit system
+  auditEventId String? @map("audit_event_id")
+  assetId      String? @map("asset_id")
+
+  durationMs Int? @map("duration_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id])
+  document BrandDocument? @relation(fields: [documentId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([auditEventId])
+  @@index([createdAt])
+  @@map("brand_queries")
+}

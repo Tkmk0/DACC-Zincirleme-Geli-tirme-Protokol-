@@ -1,0 +1,31 @@
+{
+  "name": "@dacc/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rimraf dist",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@dacc/core": "workspace:*",
+    "@dacc/brand-engine": "workspace:*",
+    "bullmq": "^5.7.0",
+    "zod": "^3.23.0",
+    "@fastify/cors": "^9.0.0",
+    "@fastify/jwt": "^8.0.0",
+    "@fastify/rate-limit": "^9.0.0",
+    "@fastify/websocket": "^8.3.0",
+    "fastify": "^4.27.0",
+    "fastify-plugin": "^4.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.0",
+    "rimraf": "^5.0.0"
+  }
+}

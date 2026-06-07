@@ -1,0 +1,22 @@
+{
+  "name": "dacc",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @dacc/core prisma generate",
+    "db:migrate": "pnpm --filter @dacc/core prisma migrate dev",
+    "db:seed": "pnpm --filter @dacc/core tsx src/db/seed.ts",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "rimraf": "^5.0.0"
+  }
+}

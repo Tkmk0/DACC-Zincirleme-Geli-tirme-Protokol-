@@ -1,0 +1,23 @@
+{
+  "name": "@dacc/scheduler",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rimraf dist",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@dacc/core": "workspace:*",
+    "node-cron": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node-cron": "^3.0.0",
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.0",
+    "rimraf": "^5.0.0"
+  }
+}
