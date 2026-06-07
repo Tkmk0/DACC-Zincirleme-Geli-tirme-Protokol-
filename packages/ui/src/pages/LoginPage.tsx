@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiPost } from "../lib/api.js";
+import { DEMO_KEY } from "../lib/mock-data.js";
 import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.js";
@@ -21,7 +22,14 @@ export function LoginPage() {
     setError(null);
 
     try {
+      if (apiKey === DEMO_KEY) {
+        localStorage.setItem("dacc_demo", "1");
+        localStorage.setItem("dacc_token", "demo");
+        void navigate("/dashboard");
+        return;
+      }
       const { token } = await apiPost<LoginResponse>("/auth/login", { apiKey });
+      localStorage.removeItem("dacc_demo");
       localStorage.setItem("dacc_token", token);
       void navigate("/dashboard");
     } catch (err) {

@@ -1,6 +1,10 @@
+import { isDemo, mockFetch } from "./mock-data.js";
+
 const BASE = import.meta.env["VITE_API_URL"] ?? "http://localhost:3000";
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  if (isDemo()) return mockFetch(path) as Promise<T>;
+
   const token = localStorage.getItem("dacc_token");
   const res = await fetch(`${BASE}${path}`, {
     ...init,
