@@ -16,6 +16,7 @@ import { auditsRoutes } from "./routes/audits/index.js";
 import { riskRoutes } from "./routes/risk/index.js";
 import { authRoutes } from "./routes/auth/index.js";
 import { brandRoutes } from "./routes/brand/index.js";
+import { chatRoutes } from "./routes/chat/index.js";
 import { liveEventsRoute } from "./routes/ws/live-events.js";
 import { debugRoutes } from "./routes/debug/index.js";
 import { maintenanceRoutes } from "./routes/maintenance/index.js";
@@ -63,6 +64,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   await app.register(auditsRoutes, { prefix: "/audits" });
   await app.register(riskRoutes, { prefix: "/risk" });
   await app.register(brandRoutes, { prefix: "/brand" });
+  await app.register(chatRoutes, { prefix: "/chat" });
   await app.register(liveEventsRoute, { prefix: "/ws" });
   await app.register(debugRoutes, { prefix: "/debug" });
   await app.register(maintenanceRoutes, { prefix: "/maintenance" });

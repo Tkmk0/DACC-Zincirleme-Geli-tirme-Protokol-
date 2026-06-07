@@ -3,8 +3,13 @@ import { MessageCircle, X, Send, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.js";
 import { Button } from "./ui/button.js";
 import { Input } from "./ui/input.js";
-import { sendToGemini, RETRY_DELAYS, type ChatMessage } from "../lib/gemini.js";
+import { apiFetch } from "../lib/api.js";
 import { cn } from "../lib/cn.js";
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
 
 export function GeminiChat() {
   const [open, setOpen] = useState(false);
@@ -12,34 +17,28 @@ export function GeminiChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryInfo, setRetryInfo] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [history, loading, retryInfo]);
+  }, [history, loading]);
 
   const send = async () => {
     const userMsg = input.trim();
     if (!userMsg || loading) return;
     setInput("");
     setError(null);
-    setRetryInfo(null);
-    const nextHistory: ChatMessage[] = [...history, { role: "user", text: userMsg }];
+    const nextHistory: ChatMessage[] = [...history, { role: "user", content: userMsg }];
     setHistory(nextHistory);
     setLoading(true);
     try {
-      const reply = await sendToGemini(history, userMsg, (attempt, waitMs) => {
-        setRetryInfo(
-          `İşlem yoğun, ${waitMs / 1000}s içinde tekrar denenecek… (${attempt}/${RETRY_DELAYS.length})`
-        );
+      const { reply } = await apiFetch<{ reply: string }>("/chat", {
+        method: "POST",
+        body: JSON.stringify({ messages: nextHistory }),
       });
-      setRetryInfo(null);
-      setHistory([...nextHistory, { role: "model", text: reply }]);
+      setHistory([...nextHistory, { role: "assistant", content: reply }]);
     } catch (e) {
-      setRetryInfo(null);
-      const msg = e instanceof Error ? e.message : "Hata oluştu";
-      setError(msg.includes("429") ? "API limiti aşıldı, lütfen birkaç saniye bekleyip tekrar deneyin." : msg);
+      setError(e instanceof Error ? e.message : "Hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -69,7 +68,7 @@ export function GeminiChat() {
           <CardContent className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             {history.length === 0 && (
               <p className="text-xs text-gray-400 text-center mt-8">
-                Merhaba! DACC hakkında soru sorabilirsin.
+                Merhaba! DACC hakkında soru sorabilir veya komut verebilirsin.
               </p>
             )}
 
@@ -86,7 +85,7 @@ export function GeminiChat() {
                       : "bg-gray-100 text-gray-800 rounded-bl-sm"
                   )}
                 >
-                  {msg.text}
+                  {msg.content}
                 </div>
               </div>
             ))}
@@ -103,10 +102,6 @@ export function GeminiChat() {
               </div>
             )}
 
-            {retryInfo !== null && (
-              <p className="text-xs text-amber-500 text-center animate-pulse">{retryInfo}</p>
-            )}
-
             {error !== null && (
               <p className="text-xs text-red-500 text-center">{error}</p>
             )}
@@ -116,7 +111,7 @@ export function GeminiChat() {
 
           <div className="px-4 pb-4 pt-2 border-t flex gap-2">
             <Input
-              placeholder="Bir şey sor…"
+              placeholder="Bir şey sor veya komut ver…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}

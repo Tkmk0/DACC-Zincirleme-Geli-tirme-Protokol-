@@ -82,6 +82,9 @@ export function mockFetch(path: string): Promise<unknown> {
   if (path.startsWith("/tenants/me")) {
     return mockDelay({ tenant: { id: "demo-tenant", slug: "demo", planTier: "PRO" } });
   }
+  if (path.startsWith("/chat")) {
+    return mockDelay({ reply: "Demo modunda AI asistan devre dışıdır. Gerçek hesabınızla giriş yapın." });
+  }
   return mockDelay({});
 }
 

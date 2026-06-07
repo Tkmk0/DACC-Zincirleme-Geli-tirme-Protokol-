@@ -12,20 +12,21 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@dacc/core": "workspace:*",
+    "@anthropic-ai/sdk": "^0.102.0",
     "@dacc/brand-engine": "workspace:*",
-    "bullmq": "^5.7.0",
-    "zod": "^3.23.0",
+    "@dacc/core": "workspace:*",
     "@fastify/cors": "^9.0.0",
     "@fastify/jwt": "^8.0.0",
     "@fastify/rate-limit": "^9.0.0",
     "@fastify/websocket": "^8.3.0",
+    "bullmq": "^5.7.0",
     "fastify": "^4.27.0",
-    "fastify-plugin": "^4.5.0"
+    "fastify-plugin": "^4.5.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
+    "rimraf": "^5.0.0",
     "tsx": "^4.11.0",
-    "typescript": "^5.4.0",
-    "rimraf": "^5.0.0"
+    "typescript": "^5.4.0"
   }
 }
