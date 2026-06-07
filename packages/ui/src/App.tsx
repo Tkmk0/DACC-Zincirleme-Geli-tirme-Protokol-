@@ -3,6 +3,7 @@ import { LoginPage } from "./pages/LoginPage.js";
 import { Dashboard } from "./pages/Dashboard.js";
 import { AssetsPage } from "./pages/AssetsPage.js";
 import { AuditDetail } from "./pages/AuditDetail.js";
+import { GeminiChat } from "./components/GeminiChat.js";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem("dacc_token");
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      <GeminiChat />
     </BrowserRouter>
   );
 }
