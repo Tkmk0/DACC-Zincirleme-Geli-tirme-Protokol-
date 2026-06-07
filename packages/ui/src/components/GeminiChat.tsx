@@ -3,7 +3,7 @@ import { MessageCircle, X, Send, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.js";
 import { Button } from "./ui/button.js";
 import { Input } from "./ui/input.js";
-import { sendToGemini, type ChatMessage } from "../lib/gemini.js";
+import { sendToGemini, RETRY_DELAYS, type ChatMessage } from "../lib/gemini.js";
 import { cn } from "../lib/cn.js";
 
 export function GeminiChat() {
@@ -12,25 +12,34 @@ export function GeminiChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryInfo, setRetryInfo] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [history, loading]);
+  }, [history, loading, retryInfo]);
 
   const send = async () => {
     const userMsg = input.trim();
     if (!userMsg || loading) return;
     setInput("");
     setError(null);
+    setRetryInfo(null);
     const nextHistory: ChatMessage[] = [...history, { role: "user", text: userMsg }];
     setHistory(nextHistory);
     setLoading(true);
     try {
-      const reply = await sendToGemini(history, userMsg);
+      const reply = await sendToGemini(history, userMsg, (attempt, waitMs) => {
+        setRetryInfo(
+          `İşlem yoğun, ${waitMs / 1000}s içinde tekrar denenecek… (${attempt}/${RETRY_DELAYS.length})`
+        );
+      });
+      setRetryInfo(null);
       setHistory([...nextHistory, { role: "model", text: reply }]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Hata oluştu");
+      setRetryInfo(null);
+      const msg = e instanceof Error ? e.message : "Hata oluştu";
+      setError(msg.includes("429") ? "API limiti aşıldı, lütfen birkaç saniye bekleyip tekrar deneyin." : msg);
     } finally {
       setLoading(false);
     }
@@ -92,6 +101,10 @@ export function GeminiChat() {
                   </span>
                 </div>
               </div>
+            )}
+
+            {retryInfo !== null && (
+              <p className="text-xs text-amber-500 text-center animate-pulse">{retryInfo}</p>
             )}
 
             {error !== null && (
