@@ -16,6 +16,12 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const enterDemo = () => {
+    localStorage.setItem("dacc_demo", "1");
+    localStorage.setItem("dacc_token", "demo");
+    void navigate("/dashboard");
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -23,9 +29,7 @@ export function LoginPage() {
 
     try {
       if (apiKey === DEMO_KEY) {
-        localStorage.setItem("dacc_demo", "1");
-        localStorage.setItem("dacc_token", "demo");
-        void navigate("/dashboard");
+        enterDemo();
         return;
       }
       const { token } = await apiPost<LoginResponse>("/auth/login", { apiKey });
@@ -68,6 +72,24 @@ export function LoginPage() {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign In"}
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-400">or</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={enterDemo}
+            >
+              Try Demo
             </Button>
           </form>
         </CardContent>
