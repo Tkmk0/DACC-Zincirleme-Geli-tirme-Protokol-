@@ -12,7 +12,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/DACC-Zincirleme-Geli-tirme-Protokol-">
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route

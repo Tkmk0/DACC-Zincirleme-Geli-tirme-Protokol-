@@ -29,6 +29,7 @@ function NavBar() {
   const navigate = useNavigate();
   const logout = () => {
     localStorage.removeItem("dacc_token");
+    localStorage.removeItem("dacc_demo");
     void navigate("/login");
   };
   return (
