@@ -17,7 +17,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   if (res.status === 401) {
     localStorage.removeItem("dacc_token");
-    window.location.href = "/login";
+    window.location.replace(import.meta.env.BASE_URL + "login");
     throw new Error("Unauthorized");
   }
 

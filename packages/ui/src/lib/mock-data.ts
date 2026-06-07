@@ -37,16 +37,19 @@ export function mockFetch(path: string): Promise<unknown> {
   if (path.startsWith("/tenants/me/stats")) {
     return mockDelay({ assetCount: 5, auditCount: 42, activeRiskScores: 4 });
   }
-  if (path.startsWith("/assets") && !path.includes("/scan") && !path.includes("/a")) {
-    return mockDelay({ assets: MOCK_ASSETS, total: MOCK_ASSETS.length });
-  }
+  // Most specific first: scan endpoint
   if (path.match(/\/assets\/\w+\/scan/)) {
     return mockDelay({ auditEventId: "demo-audit-" + Math.random().toString(36).slice(2, 8) });
   }
+  // Single asset
   if (path.match(/\/assets\/\w+/)) {
     const id = path.split("/")[2];
     const asset = MOCK_ASSETS.find((a) => a.id === id) ?? MOCK_ASSET_DEFAULT;
     return mockDelay({ asset });
+  }
+  // Asset list — catches /assets and /assets?limit=5 etc.
+  if (path.startsWith("/assets")) {
+    return mockDelay({ assets: MOCK_ASSETS, total: MOCK_ASSETS.length });
   }
   if (path.startsWith("/audits") && path.includes("/report")) {
     return mockDelay({
